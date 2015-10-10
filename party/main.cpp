@@ -2,10 +2,33 @@
 #include <iostream>
 #include <ctime>
 #include <cstdlib>
+#include <vector>
 
 MSG msg;
 HWND hwnd;
 HDC obraz;
+
+struct p
+{
+    int x;
+    int y;
+}ludzik;
+
+void new_game()
+{
+    ludzik.x = 200;
+    ludzik.y = 300;
+}
+
+int shoot_v;
+int ludzik_size = 82;
+
+struct shoot
+{
+    int x, y;
+};
+
+std::vector <shoot>strzaly;
 
 class Bitmap
 {
@@ -39,14 +62,12 @@ class Bitmap
         }
 };
 
-const int X = 20;
-const int Y = 10;
-
-const int SIZE_b = 50;
+const int X = 1000;
+const int Y = 500;
 
 int map[Y][X]  = {{0}};
 
-Bitmap kaf[] = {};
+Bitmap kaf[] = {"grafika/tlo.bmp", "grafika/ludzik.bmp", "grafika/strzal.bmp"};
 
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 int WINAPI WinMain (HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow)
@@ -69,13 +90,35 @@ int WINAPI WinMain (HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpsz
     srand(time(0));
 
     RegisterClassEx(&wnd);
-    hwnd = CreateWindow("Party", "Party", WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU  | WS_MINIMIZEBOX , 500, 250, SIZE_b * X + 6, SIZE_b * Y + 28, NULL, NULL, NULL, NULL);
+    hwnd = CreateWindow("Party", "Party", WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU  | WS_MINIMIZEBOX , 300, 250, X, Y, NULL, NULL, NULL, NULL);
     ShowWindow(hwnd, 1);
 
-    while(GetMessage(&msg, NULL, 0, 0))
+    msg.message = WM_NULL;
+    new_game();
+    int last = GetTickCount();
+
+    while (msg.message != WM_QUIT)
     {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+       if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
+       {
+          TranslateMessage (&msg);
+          DispatchMessage (&msg);
+       }
+       else
+       {
+            //logika
+
+
+            for(int i = 0; i < strzaly.size(); i++)
+            {
+                if(strzaly[i].y == 0)
+                    strzaly.erase(strzaly.begin()+i);
+                else
+                    strzaly[i].y -=2;
+            }
+
+            SendMessage(hwnd, WM_PAINT, 0, 0);
+       }
     }
 
     return 0;
@@ -98,10 +141,23 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             HBITMAP hbmBuf, hbmOldBuf;
 
             hdcBufor = CreateCompatibleDC(hdc);
-            hbmBuf = CreateCompatibleBitmap(hdc, X*SIZE_b, Y*SIZE_b);
+            hbmBuf = CreateCompatibleBitmap(hdc, X, Y);
             hbmOldBuf = (HBITMAP)SelectObject(hdcBufor, hbmBuf);
 
-            BitBlt(hdc, 0, 0, X*SIZE_b, Y*SIZE_b, hdcBufor, 0, 0, SRCCOPY);
+        //wyswietlanie gry
+
+            BitBlt(hdcBufor, 0, 0, X, Y, kaf[0], 0, 0, SRCCOPY);
+
+            //ludzik
+            BitBlt(hdcBufor, ludzik.x, ludzik.y, X, Y, kaf[1], 0, 0, SRCCOPY);
+
+            //strzaly
+            for(int i = 0; i < strzaly.size(); i++)
+                BitBlt(hdcBufor, strzaly[i].x, strzaly[i].y, 20, 20, kaf[2], 0, 0, SRCCOPY);
+
+        //koniec wyswietlania
+
+            BitBlt(hdc, 0, 0, X, Y, hdcBufor, 0, 0, SRCCOPY);
 
             DeleteObject(hbmBuf);
             DeleteDC(hdcBufor);
@@ -109,6 +165,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             EndPaint(hwnd, & ps);
             break;
         }
+
         case WM_KEYDOWN:
         {
             switch(( int ) wParam )
@@ -116,7 +173,26 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case VK_ESCAPE:
                     DestroyWindow( hwnd );
                     break;
+                case VK_LEFT:
+                    ludzik.x -= 10;
+                    break;
+                case VK_RIGHT:
+                    ludzik.x += 10;
+                    break;
             }
+
+            switch(( int ) wParam )
+            {
+                case VK_SPACE:
+                    shoot new_s;
+                    new_s.x = ludzik.x;
+                    new_s.y = ludzik.y;
+
+                    strzaly.push_back(new_s);
+                    break;
+            }
+
+            SendMessage(hwnd, WM_PAINT, wParam, lParam);
         }
         default:
             return DefWindowProc (hwnd, message, wParam, lParam);
