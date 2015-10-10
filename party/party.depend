@@ -1,0 +1,7 @@
+# depslib dependency file v1.0
+1444472802 source:c:\users\szewy\desktop\party\main.cpp
+	<windows.h>
+	<iostream>
+	<ctime>
+	<cstdlib>
+
